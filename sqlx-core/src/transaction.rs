@@ -20,6 +20,13 @@ pub trait TransactionManager {
         conn: &mut <Self::Database as Database>::Connection,
     ) -> BoxFuture<'_, Result<(), Error>>;
 
+    /// Begin a new concurrent transaction or establish a savepoint within the active transaction.
+    fn begin_concurrent(
+        conn: &mut <Self::Database as Database>::Connection,
+    ) -> BoxFuture<'_, Result<(), Error>> {
+        Self::begin(conn)
+    }
+
     /// Commit the active transaction or release the most recent savepoint.
     fn commit(
         conn: &mut <Self::Database as Database>::Connection,
@@ -70,6 +77,22 @@ where
 
         Box::pin(async move {
             DB::TransactionManager::begin(&mut conn).await?;
+
+            Ok(Self {
+                connection: conn,
+                open: true,
+            })
+        })
+    }
+
+    #[doc(hidden)]
+    pub fn begin_concurrent(
+        conn: impl Into<MaybePoolConnection<'c, DB>>,
+    ) -> BoxFuture<'c, Result<Self, Error>> {
+        let mut conn = conn.into();
+
+        Box::pin(async move {
+            DB::TransactionManager::begin_concurrent(&mut conn).await?;
 
             Ok(Self {
                 connection: conn,
@@ -220,6 +243,11 @@ impl<'c, 't, DB: Database> crate::acquire::Acquire<'t> for &'t mut Transaction<'
     #[inline]
     fn begin(self) -> BoxFuture<'t, Result<Transaction<'t, DB>, Error>> {
         Transaction::begin(&mut **self)
+    }
+
+    #[inline]
+    fn begin_concurrent(self) -> BoxFuture<'t, Result<Transaction<'t, DB>, Error>> {
+        Transaction::begin_concurrent(&mut **self)
     }
 }
 

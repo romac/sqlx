@@ -379,6 +379,12 @@ impl<DB: Database> Pool<DB> {
         Ok(Transaction::begin(MaybePoolConnection::PoolConnection(self.acquire().await?)).await?)
     }
 
+    /// Retrieves a connection and immediately begins a new concurrent transaction.
+    pub async fn begin_concurrent(&self) -> Result<Transaction<'static, DB>, Error> {
+        Transaction::begin_concurrent(MaybePoolConnection::PoolConnection(self.acquire().await?))
+            .await
+    }
+
     /// Attempts to retrieve a connection and immediately begins a new transaction if successful.
     pub async fn try_begin(&self) -> Result<Option<Transaction<'static, DB>>, Error> {
         match self.try_acquire() {

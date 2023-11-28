@@ -41,6 +41,10 @@ impl AnyConnectionBackend for SqliteConnection {
         SqliteTransactionManager::begin(self)
     }
 
+    fn begin_concurrent(&mut self) -> BoxFuture<'_, sqlx_core::Result<()>> {
+        SqliteTransactionManager::begin_concurrent(self)
+    }
+
     fn commit(&mut self) -> BoxFuture<'_, sqlx_core::Result<()>> {
         SqliteTransactionManager::commit(self)
     }

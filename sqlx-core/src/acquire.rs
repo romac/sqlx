@@ -78,6 +78,8 @@ pub trait Acquire<'c> {
     fn acquire(self) -> BoxFuture<'c, Result<Self::Connection, Error>>;
 
     fn begin(self) -> BoxFuture<'c, Result<Transaction<'c, Self::Database>, Error>>;
+
+    fn begin_concurrent(self) -> BoxFuture<'c, Result<Transaction<'c, Self::Database>, Error>>;
 }
 
 impl<'a, DB: Database> Acquire<'a> for &'_ Pool<DB> {
@@ -94,6 +96,14 @@ impl<'a, DB: Database> Acquire<'a> for &'_ Pool<DB> {
 
         Box::pin(async move {
             Transaction::begin(MaybePoolConnection::PoolConnection(conn.await?)).await
+        })
+    }
+
+    fn begin_concurrent(self) -> BoxFuture<'static, Result<Transaction<'a, DB>, Error>> {
+        let conn = self.acquire();
+
+        Box::pin(async move {
+            Transaction::begin_concurrent(MaybePoolConnection::PoolConnection(conn.await?)).await
         })
     }
 }
@@ -122,6 +132,16 @@ macro_rules! impl_acquire {
                 Result<$crate::transaction::Transaction<'c, $DB>, $crate::error::Error>,
             > {
                 $crate::transaction::Transaction::begin(self)
+            }
+
+            #[inline]
+            fn begin_concurrent(
+                self,
+            ) -> futures_core::future::BoxFuture<
+                'c,
+                Result<$crate::transaction::Transaction<'c, $DB>, $crate::error::Error>,
+            > {
+                $crate::transaction::Transaction::begin_concurrent(self)
             }
         }
     };

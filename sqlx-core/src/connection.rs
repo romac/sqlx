@@ -49,6 +49,16 @@ pub trait Connection: Send {
     where
         Self: Sized;
 
+    /// Begin a new concurrent transaction or establish a savepoint within the active transaction.
+    ///
+    /// Returns a [`Transaction`] for controlling and tracking the new transaction.
+    fn begin_concurrent(&mut self) -> BoxFuture<'_, Result<Transaction<'_, Self::Database>, Error>>
+    where
+        Self: Sized,
+    {
+        self.begin()
+    }
+
     /// Execute the function inside a transaction.
     ///
     /// If the function returns an error, the transaction will be rolled back. If it does not

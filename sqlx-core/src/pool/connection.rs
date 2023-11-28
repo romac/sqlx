@@ -159,6 +159,14 @@ impl<'c, DB: Database> crate::acquire::Acquire<'c> for &'c mut PoolConnection<DB
     {
         crate::transaction::Transaction::begin(&mut **self)
     }
+
+    #[inline]
+    fn begin_concurrent(
+        self,
+    ) -> futures_core::future::BoxFuture<'c, Result<crate::transaction::Transaction<'c, DB>, Error>>
+    {
+        crate::transaction::Transaction::begin_concurrent(&mut **self)
+    }
 }
 
 /// Returns the connection to the [`Pool`][crate::pool::Pool] it was checked-out from.

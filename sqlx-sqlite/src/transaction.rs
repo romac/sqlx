@@ -14,6 +14,12 @@ impl TransactionManager for SqliteTransactionManager {
         Box::pin(conn.worker.begin())
     }
 
+    fn begin_concurrent(
+        conn: &mut <Self::Database as sqlx_core::database::Database>::Connection,
+    ) -> BoxFuture<'_, Result<(), Error>> {
+        Box::pin(conn.worker.begin_concurrent())
+    }
+
     fn commit(conn: &mut SqliteConnection) -> BoxFuture<'_, Result<(), Error>> {
         Box::pin(conn.worker.commit())
     }

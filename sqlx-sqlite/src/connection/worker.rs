@@ -55,6 +55,7 @@ enum Command {
         tx: flume::Sender<Result<Either<SqliteQueryResult, SqliteRow>, Error>>,
     },
     Begin {
+        concurrent: bool,
         tx: rendezvous_oneshot::Sender<Result<(), Error>>,
     },
     Commit {
@@ -155,11 +156,18 @@ impl ConnectionWorker {
 
                             update_cached_statements_size(&conn, &shared.cached_statements_size);
                         }
-                        Command::Begin { tx } => {
+                        Command::Begin { tx, concurrent } => {
                             let depth = conn.transaction_depth;
+
+                            let begin_sql = if concurrent {
+                                Cow::from("BEGIN CONCURRENT")
+                            } else {
+                                begin_ansi_transaction_sql(depth)
+                            };
+
                             let res =
                                 conn.handle
-                                    .exec(begin_ansi_transaction_sql(depth))
+                                    .exec(begin_sql)
                                     .map(|_| {
                                         conn.transaction_depth += 1;
                                     });
@@ -302,8 +310,19 @@ impl ConnectionWorker {
     }
 
     pub(crate) async fn begin(&mut self) -> Result<(), Error> {
-        self.oneshot_cmd_with_ack(|tx| Command::Begin { tx })
-            .await?
+        self.oneshot_cmd_with_ack(|tx| Command::Begin {
+            concurrent: false,
+            tx,
+        })
+        .await?
+    }
+
+    pub(crate) async fn begin_concurrent(&mut self) -> Result<(), Error> {
+        self.oneshot_cmd_with_ack(|tx| Command::Begin {
+            concurrent: true,
+            tx,
+        })
+        .await?
     }
 
     pub(crate) async fn commit(&mut self) -> Result<(), Error> {

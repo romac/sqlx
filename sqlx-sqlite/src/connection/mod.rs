@@ -166,6 +166,13 @@ impl Connection for SqliteConnection {
         Transaction::begin(self)
     }
 
+    fn begin_concurrent(&mut self) -> BoxFuture<'_, Result<Transaction<'_, Self::Database>, Error>>
+    where
+        Self: Sized,
+    {
+        Transaction::begin_concurrent(self)
+    }
+
     fn cached_statements_size(&self) -> usize {
         self.worker
             .shared
